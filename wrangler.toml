@@ -6,7 +6,7 @@ workers_dev = true
 # Serve .html files as text imports.
 [[rules]]
 type = "Text"
-globs = ["**/*.html"]
+globs = ["**/*.html", "**/*.svg", "**/*.webmanifest"]
 fallthrough = true
 
 [observability]

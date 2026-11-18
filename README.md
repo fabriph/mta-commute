@@ -6,10 +6,12 @@ It shows live NYC subway arrivals for a fixed commute, including transfers, and 
 options by when you'd actually arrive, not just by which train leaves first. If the slower
 line happens to come right away, it can still be the faster choice, and the page says so.
 
-- One Cloudflare Worker serves the page and a small JSON API. The page is ~9 KB, and
-  each refresh downloads ~2 KB of JSON instead of the MTA's large protobuf feeds.
-- The Worker fetches the [MTA GTFS-realtime feeds](https://api.mta.info/) (no API key
-  needed), decodes only the lines you use, and works out the connections.
+- Static site on GitHub Pages: the phone fetches the [MTA GTFS-realtime feeds](https://api.mta.info/)
+  directly (no API key; the MTA sends `Access-Control-Allow-Origin: *`) and decodes
+  them with a tiny dependency-free protobuf reader, only for the lines you use.
+- Optional fast mode: the same code runs as a Cloudflare Worker that does the decoding
+  server-side, so each refresh is ~2 KB of JSON instead of the raw feeds (~100–200 KB
+  each). Useful on weak signal; see *Cloudflare (optional)* below.
 - Your stations are **not** in this repo. They live in the URL fragment of your personal
   link, plus the browser's local storage on your phone.
 - Weak signal underground: the last result is saved on the phone and shown instantly
@@ -20,10 +22,10 @@ line happens to come right away, it can still be the faster choice, and the page
 
 ## Configure
 
-Open `/setup` on your deployment, or write the link by hand:
+Open `setup.html` on your deployment, or write the link by hand:
 
 ```
-https://<your-worker>.workers.dev/#h=<home stop>&w=<work stop>&r=<routes>
+https://<user>.github.io/mta-commute/#h=<home stop>&w=<work stop>&r=<routes>
 ```
 
 | Param | Meaning | Default |
@@ -48,24 +50,22 @@ without the `N`/`S` suffix. The setup page's station search shows them.
 
 ## Deploy (free)
 
-Everything fits in Cloudflare's free Workers plan.
+Every push to `main` runs the tests, then publishes the site to the `gh-pages` branch.
+Once, in the repo's *Settings → Pages*, set *Source* to **Deploy from a branch**, branch
+**gh-pages**, folder **/ (root)**. The site appears at `https://<user>.github.io/mta-commute/`.
 
-1. Create a free Cloudflare account at <https://dash.cloudflare.com/sign-up>.
-2. Note your **Account ID**: in the dashboard, open *Workers & Pages*. It's shown on the
-   right side, or in the account menu under *Account home → ⋯ → Copy account ID*.
-3. Create an API token: *My Profile → API Tokens → Create Token →* use the
-   **Edit Cloudflare Workers** template, then *Continue → Create Token*. Copy it.
-4. In this GitHub repo, open *Settings → Secrets and variables → Actions → New
-   repository secret* and add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
-5. Re-run the latest *Test and deploy* workflow from the *Actions* tab, or push any
-   commit. Each push to `main` tests and deploys.
+CI also runs `scripts/live-check.mjs` against the real MTA feeds. It reports HTTP status,
+CORS headers, feed sizes and decode times.
 
-The page will be at `https://mta-commute.<your-subdomain>.workers.dev`. The first time,
-Cloudflare asks you to pick that `workers.dev` subdomain under *Workers & Pages*.
+### Cloudflare (optional fast mode)
+
+1. Create a free Cloudflare account and note your **Account ID** (*Workers & Pages* overview).
+2. *My Profile → API Tokens → Create Token →* template **Edit Cloudflare Workers**.
+3. Add repo secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`
+   (*Settings → Secrets and variables → Actions*). Pushes to `main` then also deploy the
+   Worker to `https://mta-commute.<subdomain>.workers.dev`.
 
 **No GitHub setup?** Run `npm run bundle`. It writes one self-contained file, `dist/worker.js`. In the Cloudflare dashboard, create a Worker from the *Hello World* template, open *Edit code*, replace everything with that file and click *Deploy*.
-
-Prefer the terminal? `npx wrangler login && npx wrangler deploy` works as well.
 
 ## Develop
 
@@ -73,6 +73,7 @@ Prefer the terminal? `npx wrangler login && npx wrangler deploy` works as well.
 npm install
 npm test                      # decoder + planner tests against synthetic feeds
 node scripts/dev-server.mjs   # preview with fake trains, no MTA access needed
+node scripts/build-site.mjs   # assemble the static site into _site/
 npx wrangler dev              # run the real Worker locally against live feeds
 ```
 

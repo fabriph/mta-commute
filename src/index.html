@@ -6,9 +6,10 @@
 <meta name="theme-color" content="#0b0b0c">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="/manifest.webmanifest">
-<link rel="icon" href="/icon.svg">
-<link rel="apple-touch-icon" href="/icon.svg">
+<!--MODE-->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
 <title>Commute</title>
 <style>
 :root{--bg:#0b0b0c;--fg:#f4f4f5;--mute:#8b8b93;--card:#17171a;--line:#26262b;--good:#34d399;--warn:#fbbf24}
@@ -50,9 +51,9 @@ footer a{color:var(--mute)}
 <main>
 <header><button id="dir" aria-label="Switch direction"></button><div id="status"></div></header>
 <div id="out"></div>
-<footer><span id="err"></span><a id="edit" href="/setup">Edit</a></footer>
+<footer><span id="err"></span><a id="edit" href="setup.html">Edit</a></footer>
 </main>
-<script>
+<script type="module">
 (() => {
   const COLORS = {A:'#0039a6',C:'#0039a6',E:'#0039a6',H:'#0039a6',FS:'#808183',B:'#ff6319',D:'#ff6319',F:'#ff6319',M:'#ff6319',G:'#6cbe45',J:'#996633',Z:'#996633',L:'#a7a9ac',N:'#fccc0a',Q:'#fccc0a',R:'#fccc0a',W:'#fccc0a','1':'#ee352e','2':'#ee352e','3':'#ee352e','4':'#00933c','5':'#00933c','6':'#00933c','7':'#b933ad',GS:'#808183',SI:'#0039a6'};
   const DARK_TEXT = {N:1,Q:1,R:1,W:1};
@@ -66,14 +67,39 @@ footer a{color:var(--mute)}
     if (cfg) localStorage.setItem('cfg', cfg);
     else cfg = localStorage.getItem('cfg') || '';
   } catch (e) {}
-  if (!cfg) { location.replace('/setup'); return; }
-  $('edit').href = '/setup#' + cfg;
+  if (!cfg) { location.replace('setup.html'); return; }
+  $('edit').href = 'setup.html#' + cfg;
 
   const params = new URLSearchParams(cfg);
   const split = Number(params.get('s') || 13);
   params.delete('s');
-  const api = '/api/plan?' + params.toString();
-  const cacheKey = 'plan:' + api;
+  const query = params.toString();
+  const cacheKey = 'plan:' + query;
+  // On the Cloudflare Worker the server does the work (tiny responses). Anywhere
+  // else (e.g. GitHub Pages) the phone fetches the MTA feeds and decodes them itself.
+  const API_MODE = !!document.querySelector('meta[name="mode"][content="api"]');
+
+  async function getPlan(signal) {
+    if (API_MODE) {
+      const res = await fetch('api/plan?' + query, {signal, cache: 'no-store'});
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || 'HTTP ' + res.status);
+      return body;
+    }
+    const [{buildPlan}, {decodeFeed}, {FEED_URL}] = await Promise.all([
+      import('./plan.js'), import('./gtfsrt.js'), import('./planner.js'),
+    ]);
+    return buildPlan(new URLSearchParams(query), async (key, wanted) => {
+      try {
+        const res = await fetch(FEED_URL(key), {signal, cache: 'no-store'});
+        if (!res.ok) return {error: 'HTTP ' + res.status};
+        return decodeFeed(new Uint8Array(await res.arrayBuffer()), (r) => wanted.has(r));
+      } catch (e) {
+        if (e.name === 'AbortError') throw e;
+        return {error: String(e.message || e)};
+      }
+    });
+  }
 
   let dir;
   let data = null, fetchedAt = 0, ok = false, loading = false;
@@ -142,11 +168,11 @@ footer a{color:var(--mute)}
     loading = true;
     render();
     const ctl = new AbortController();
-    const timer = setTimeout(() => ctl.abort(), 8000);
+    const timer = setTimeout(() => ctl.abort(), API_MODE ? 8000 : 15000);
     try {
-      const res = await fetch(api, {signal: ctl.signal, cache: 'no-store'});
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error || 'HTTP ' + res.status);
+      const body = await getPlan(ctl.signal);
+      // No feed reached at all: keep the saved times instead of blanking them.
+      if (body.feedTime == null && body.errors && body.errors.length) throw new Error('No connection to MTA');
       data = body; fetchedAt = now(); ok = true;
       $('err').textContent = body.errors && body.errors.length ? 'Feed issue: ' + body.errors.join(', ') : '';
       try { localStorage.setItem(cacheKey, JSON.stringify({data, at: fetchedAt})); } catch (e) {}

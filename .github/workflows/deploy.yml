@@ -30,7 +30,33 @@ jobs:
       - run: npm ci
       - run: node scripts/live-check.mjs
 
+  pages:
+    # Publishes the static site to the gh-pages branch (served by GitHub Pages).
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/build-site.mjs
+      - name: Publish to gh-pages
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd _site
+          git init -q -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Deploy $GITHUB_SHA"
+          git push -f "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
+
   deploy:
+    # Optional: Cloudflare Worker "fast mode". Skipped unless the secrets are set.
     needs: test
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest

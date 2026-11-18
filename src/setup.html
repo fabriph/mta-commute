@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0b0b0c">
-<link rel="icon" href="/icon.svg">
+<!--MODE-->
+<link rel="icon" href="icon.svg">
 <title>Commute · Setup</title>
 <style>
 :root{--bg:#0b0b0c;--fg:#f4f4f5;--mute:#8b8b93;--card:#17171a;--line:#2c2c32;--acc:#60a5fa}
@@ -44,7 +45,7 @@ code{background:var(--card);padding:1px 5px;border-radius:5px;font-size:14px}
 <div id="err"></div>
 <div class="btns"><a id="open" href="#">Open</a><button id="copy" type="button">Copy link</button></div>
 </main>
-<script>
+<script type="module">
 (() => {
   const $ = (id) => document.getElementById(id);
   const fields = ['h', 'w', 'r', 'x', 'k', 's'];
@@ -59,7 +60,14 @@ code{background:var(--card);padding:1px 5px;border-radius:5px;font-size:14px}
   const prev = new URLSearchParams(location.hash.slice(1));
   for (const f of fields) if (prev.get(f) != null) $(f).value = prev.get(f);
 
-  fetch('/api/stops').then((r) => r.json()).then((s) => {
+  const API_MODE = !!document.querySelector('meta[name="mode"][content="api"]');
+  const loadStops = API_MODE
+    ? fetch('api/stops').then((r) => r.json())
+    : import('./stops.js').then((m) => m.STOP_NAMES);
+  // Link to the main page, wherever this site is hosted (root or a subpath).
+  const base = location.href.split('#')[0].replace(/setup(\.html)?$/, '');
+
+  loadStops.then((s) => {
     stops = s;
     $('stations').innerHTML = Object.keys(s).sort((a, b) => s[a].localeCompare(s[b]))
       .map((id) => '<option value="' + (s[id] + ' · ' + id).replace(/"/g, '&quot;') + '">').join('');
@@ -78,13 +86,12 @@ code{background:var(--card);padding:1px 5px;border-radius:5px;font-size:14px}
     if ($('k').value && $('k').value !== '0') p.set('k', $('k').value);
     if ($('s').value !== '13') p.set('s', $('s').value);
     const ready = h && w && r;
-    const url = location.origin + '/#' + p.toString();
+    const url = base + '#' + p.toString();
     $('url').textContent = ready ? url : 'Fill in the fields to get your link.';
     $('open').href = ready ? url : '#';
     $('err').textContent = '';
-    if (ready) {
-      fetch('/api/plan?' + p.toString()).then((res) => res.ok ? null : res.json())
-        .then((b) => { if (b) $('err').textContent = b.error; }).catch(() => {});
+    if (ready && !API_MODE) {
+      import('./planner.js').then(({parseConfig}) => parseConfig(p)).catch((e) => { $('err').textContent = e.message; });
     }
   }
   for (const f of fields) $(f).addEventListener('change', update);

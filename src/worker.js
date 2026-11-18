@@ -5,17 +5,13 @@ import INDEX_HTML from './index.html';
 import SETUP_HTML from './setup.html';
 import { STOP_NAMES } from './stops.js';
 
-const MANIFEST = JSON.stringify({
-  name: 'Commute',
-  short_name: 'Commute',
-  start_url: '/',
-  display: 'standalone',
-  background_color: '#0b0b0c',
-  theme_color: '#0b0b0c',
-  icons: [{ src: '/icon.svg', sizes: 'any', type: 'image/svg+xml' }],
-});
+import MANIFEST from './manifest.webmanifest';
+import ICON_SVG from './icon.svg';
 
-const ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#0b0b0c"/><circle cx="50" cy="50" r="30" fill="#fff"/><text x="50" y="62" font-family="Helvetica,Arial,sans-serif" font-size="34" font-weight="700" text-anchor="middle" fill="#0b0b0c">go</text></svg>';
+// Tells the pages to ask this Worker for plans instead of decoding feeds in the browser.
+const API_META = '<meta name="mode" content="api">';
+const INDEX = INDEX_HTML.replace('<!--MODE-->', API_META);
+const SETUP = SETUP_HTML.replace('<!--MODE-->', API_META);
 
 const FEED_CACHE_SECONDS = 15;
 const FEED_TIMEOUT_MS = 6000;
@@ -28,9 +24,11 @@ export default {
     }
     switch (url.pathname) {
       case '/':
-        return text(INDEX_HTML, 'text/html; charset=utf-8', 'public, max-age=300');
+      case '/index.html':
+        return text(INDEX, 'text/html; charset=utf-8', 'public, max-age=300');
       case '/setup':
-        return text(SETUP_HTML, 'text/html; charset=utf-8', 'public, max-age=300');
+      case '/setup.html':
+        return text(SETUP, 'text/html; charset=utf-8', 'public, max-age=300');
       case '/manifest.webmanifest':
         return text(MANIFEST, 'application/manifest+json', 'public, max-age=86400');
       case '/icon.svg':
