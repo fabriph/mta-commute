@@ -63,6 +63,8 @@ Everything fits in Cloudflare's free Workers plan.
 The page will be at `https://mta-commute.<your-subdomain>.workers.dev`. The first time,
 Cloudflare asks you to pick that `workers.dev` subdomain under *Workers & Pages*.
 
+**No GitHub setup?** Run `npm run bundle`. It writes one self-contained file, `dist/worker.js`. In the Cloudflare dashboard, create a Worker from the *Hello World* template, open *Edit code*, replace everything with that file and click *Deploy*.
+
 Prefer the terminal? `npx wrangler login && npx wrangler deploy` works as well.
 
 ## Develop
