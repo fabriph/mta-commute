@@ -1,0 +1,19 @@
+name: Site check
+
+# Manual check that the published GitHub Pages site responds.
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch published pages
+        run: |
+          base="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/"
+          for p in "" setup.html plan.js stops.js manifest.webmanifest; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "$base$p")
+            echo "$code $base$p"
+            [ "$code" = 200 ] || fail=1
+          done
+          exit ${fail:-0}
