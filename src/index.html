@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0b0c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg">
+<link rel="apple-touch-icon" href="/icon.svg">
+<title>Commute</title>
+<style>
+:root{--bg:#0b0b0c;--fg:#f4f4f5;--mute:#8b8b93;--card:#17171a;--line:#26262b;--good:#34d399;--warn:#fbbf24}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.35 -apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;-webkit-text-size-adjust:100%}
+main{max-width:520px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 14px) 16px 40px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+#dir{all:unset;cursor:pointer;font-size:26px;font-weight:700;letter-spacing:-.02em}
+#dir small{font-size:15px;font-weight:500;color:var(--mute);margin-left:6px}
+#status{font-size:13px;color:var(--mute);text-align:right}
+#status.off{color:var(--warn)}
+.card{background:var(--card);border-radius:16px;padding:16px;margin-top:14px}
+.best .when{font-size:56px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.best .when .u{font-size:22px;font-weight:600;color:var(--mute);margin-left:4px}
+.best .meta{margin-top:10px;color:var(--mute)}
+.best .meta b{color:var(--fg);font-weight:600}
+.tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--good);margin-bottom:10px}
+.chain{display:inline-flex;align-items:center;gap:4px;vertical-align:middle}
+.chain i{font-style:normal;color:var(--mute);font-size:13px}
+.b{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;font-weight:700;font-size:15px;color:#fff}
+.best .b{width:34px;height:34px;font-size:19px}
+.row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:0}
+.row .t{font-size:22px;font-weight:650;min-width:64px}
+.row .d{color:var(--mute);font-size:14px}
+.row .a{text-align:right;font-size:15px}
+.row .a small{display:block;color:var(--mute);font-size:12px}
+.row.missed{opacity:.4}
+h2{font-size:13px;font-weight:600;color:var(--mute);text-transform:uppercase;letter-spacing:.06em;margin:0 0 6px}
+.board{display:flex;align-items:center;gap:12px;padding:8px 0}
+.board .ts{font-size:20px;font-weight:600;letter-spacing:-.01em}
+.board .ts span{color:var(--mute);font-weight:500}
+.empty{color:var(--mute)}
+footer{margin-top:18px;font-size:13px;color:var(--mute);display:flex;justify-content:space-between}
+footer a{color:var(--mute)}
+</style>
+</head>
+<body>
+<main>
+<header><button id="dir" aria-label="Switch direction"></button><div id="status"></div></header>
+<div id="out"></div>
+<footer><span id="err"></span><a id="edit" href="/setup">Edit</a></footer>
+</main>
+<script>
+(() => {
+  const COLORS = {A:'#0039a6',C:'#0039a6',E:'#0039a6',H:'#0039a6',FS:'#808183',B:'#ff6319',D:'#ff6319',F:'#ff6319',M:'#ff6319',G:'#6cbe45',J:'#996633',Z:'#996633',L:'#a7a9ac',N:'#fccc0a',Q:'#fccc0a',R:'#fccc0a',W:'#fccc0a','1':'#ee352e','2':'#ee352e','3':'#ee352e','4':'#00933c','5':'#00933c','6':'#00933c','7':'#b933ad',GS:'#808183',SI:'#0039a6'};
+  const DARK_TEXT = {N:1,Q:1,R:1,W:1};
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  // Config lives in the URL fragment (never sent to a server) and is remembered
+  // on this device so a home-screen icon opened without it still works.
+  let cfg = location.hash.slice(1);
+  try {
+    if (cfg) localStorage.setItem('cfg', cfg);
+    else cfg = localStorage.getItem('cfg') || '';
+  } catch (e) {}
+  if (!cfg) { location.replace('/setup'); return; }
+  $('edit').href = '/setup#' + cfg;
+
+  const params = new URLSearchParams(cfg);
+  const split = Number(params.get('s') || 13);
+  params.delete('s');
+  const api = '/api/plan?' + params.toString();
+  const cacheKey = 'plan:' + api;
+
+  let dir;
+  let data = null, fetchedAt = 0, ok = false, loading = false;
+  try {
+    const c = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+    if (c) { data = c.data; fetchedAt = c.at; }
+  } catch (e) {}
+
+  const now = () => Date.now() / 1000;
+  const bullet = (l) => '<span class="b" style="background:' + (COLORS[l] || '#555') + (DARK_TEXT[l] ? ';color:#000' : '') + '">' + esc(l) + '</span>';
+  const mins = (t) => Math.max(0, Math.floor((t - now()) / 60));
+  // Subway times are always shown in New York time, wherever the phone thinks it is.
+  const TZ = 'America/New_York';
+  const clock = (t) => new Date(t * 1000).toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit', timeZone: TZ}).replace(/\s?[AP]M$/i, '');
+  const nyHour = () => Number(new Intl.DateTimeFormat('en-US', {hour: 'numeric', hourCycle: 'h23', timeZone: TZ}).format(new Date()));
+  const name = (id) => (data && data.names[id]) || id;
+  const chain = (j) => '<span class="chain">' + j.legs.map((l) => bullet(l.line)).join('<i>›</i>') + '</span>';
+  const via = (j) => j.legs.length > 1 ? j.legs.slice(1).map((l, i) => l.line + ' at ' + esc(name(j.legs[i].to)) + ' ' + clock(l.dep)).join(', ') : 'direct';
+
+  dir = nyHour() < split ? 'work' : 'home';
+
+  function render() {
+    $('dir').innerHTML = (dir === 'work' ? 'To work' : 'To home') + '<small>⇄</small>';
+    const age = fetchedAt ? Math.round(now() - fetchedAt) : null;
+    const st = $('status');
+    st.className = ok ? '' : 'off';
+    st.textContent = loading && !data ? 'Loading…'
+      : age == null ? 'Offline'
+      : (ok ? 'Live' : 'Offline') + ' · ' + (age < 60 ? age + ' s' : Math.round(age / 60) + ' min') + ' ago';
+    if (!data) { $('out').innerHTML = ''; return; }
+    const d = data.dirs[dir];
+    const t = now();
+    // Recomputed on every render so saved data stays correct while offline.
+    const reach = t + (Number(params.get('k')) || 0) * 60;
+    const js = d.journeys.filter((j) => j.dep >= t - 30).map((j) => ({...j, missed: j.dep < reach}));
+    let html = '';
+    const best = js.filter((j) => j.arr != null && !j.missed).sort((a, b) => a.arr - b.arr || a.dep - b.dep)[0];
+    if (best) {
+      html += '<div class="card best"><div class="tag">Take</div>' +
+        '<div class="when">' + chain(best) + ' ' + mins(best.dep) + '<span class="u">min</span></div>' +
+        '<div class="meta">Arrive <b>' + clock(best.arr) + '</b> · ' + via(best) + '</div></div>';
+    }
+    const rest = js.filter((j) => j !== best);
+    if (rest.length) {
+      html += '<div class="card">' + rest.map((j) => {
+        const delta = best && j.arr ? j.arr - best.arr : null;
+        return '<div class="row' + (j.missed ? ' missed' : '') + '">' + chain(j) +
+          '<div><div class="t">' + mins(j.dep) + ' min</div><div class="d">' + via(j) + '</div></div>' +
+          '<div class="a">' + (j.arr ? clock(j.arr) : '—') + '<small>' +
+          (j.arr == null ? 'no connection yet' : delta > 0 ? '+' + Math.round(delta / 60) + ' min' : delta === 0 ? 'same train' : '') +
+          '</small></div></div>';
+      }).join('') + '</div>';
+    }
+    if (!js.length) html += '<div class="card empty">No trains in the feed right now.</div>';
+    const boards = d.boards.map((b) => ({line: b.line, deps: b.deps.filter((x) => x >= t - 30).slice(0, 3)})).filter((b) => b.deps.length);
+    if (boards.length) {
+      html += '<div class="card"><h2>At ' + esc(name(d.origin)) + '</h2>' + boards.map((b) =>
+        '<div class="board">' + bullet(b.line) + '<div class="ts">' + b.deps.map(mins).join(' <span>·</span> ') + ' <span>min</span></div></div>'
+      ).join('') + '</div>';
+    }
+    $('out').innerHTML = html;
+  }
+
+  async function load() {
+    if (loading) return;
+    loading = true;
+    render();
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 8000);
+    try {
+      const res = await fetch(api, {signal: ctl.signal, cache: 'no-store'});
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || 'HTTP ' + res.status);
+      data = body; fetchedAt = now(); ok = true;
+      $('err').textContent = body.errors && body.errors.length ? 'Feed issue: ' + body.errors.join(', ') : '';
+      try { localStorage.setItem(cacheKey, JSON.stringify({data, at: fetchedAt})); } catch (e) {}
+    } catch (e) {
+      ok = false;
+      $('err').textContent = e.name === 'AbortError' ? 'Network slow, showing saved times' : String(e.message || e);
+    } finally {
+      clearTimeout(timer);
+      loading = false;
+      render();
+    }
+  }
+
+  $('dir').onclick = () => { dir = dir === 'work' ? 'home' : 'work'; render(); };
+  render();
+  load();
+  setInterval(() => { if (!document.hidden) load(); }, 30000);
+  setInterval(render, 5000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+  window.addEventListener('online', load);
+})();
+</script>
+</body>
+</html>

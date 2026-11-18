@@ -1,0 +1,13 @@
+name = "mta-commute"
+main = "src/worker.js"
+compatibility_date = "2026-11-01"
+workers_dev = true
+
+# Serve .html files as text imports.
+[[rules]]
+type = "Text"
+globs = ["**/*.html"]
+fallthrough = true
+
+[observability]
+enabled = false
