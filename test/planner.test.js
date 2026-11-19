@@ -13,7 +13,7 @@ function plan(query, dir, now = NOW) {
   const buf = encodeFeed(NOW - 20, scenario());
   const wanted = linesFor(config);
   const { trips } = decodeFeed(buf, (r) => wanted.has(r));
-  return planDirection(indexTrips(trips), directionLegs(config, dir), now, config.walk);
+  return planDirection(indexTrips(trips), directionLegs(config, dir), now);
 }
 
 test('decoder reads header, trips, routes and stop times', () => {
@@ -83,11 +83,11 @@ test('to home: routes are reversed', () => {
   assert.equal(res.journeys[1].arr, NOW + 1300);
 });
 
-test('trains you cannot reach in time are marked missed and never best', () => {
-  const res = plan('h=H01&w=W01&r=N>T02>7&k=3', 'work');
+test('every catchable train is shown, even with an old walk-time param', () => {
+  const res = plan('h=H01&w=W01&r=N>T02>7&k=5', 'work');
   const n1b = res.journeys.find((j) => j.legs[0].trip === 'n1b');
-  assert.ok(n1b.missed);
-  assert.ok(!n1b.best);
+  assert.ok(n1b && n1b.best, 'a train leaving in 2 min is still recommended');
+  assert.ok(!('missed' in n1b));
 });
 
 test('direct route and multi-line legs', () => {

@@ -38,7 +38,6 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .row .d{color:var(--mute);font-size:14px}
 .row .a{text-align:right;font-size:15px}
 .row .a small{display:block;color:var(--mute);font-size:12px}
-.row.missed{opacity:.4}
 h2{font-size:13px;font-weight:600;color:var(--mute);text-transform:uppercase;letter-spacing:.06em;margin:0 0 6px}
 .board{display:flex;align-items:center;gap:12px;padding:8px 0}
 .board .ts{font-size:20px;font-weight:600;letter-spacing:-.01em}
@@ -151,10 +150,9 @@ footer a{color:var(--mute)}
     const d = data.dirs[dir];
     const t = now();
     // Recomputed on every render so saved data stays correct while offline.
-    const reach = t + (Number(params.get('k')) || 0) * 60;
-    const js = d.journeys.filter((j) => j.dep >= t - 30).map((j) => ({...j, missed: j.dep < reach}));
+    const js = d.journeys.filter((j) => j.dep >= t - 30);
     let html = '';
-    const best = js.filter((j) => j.arr != null && !j.missed).sort((a, b) => a.arr - b.arr || a.dep - b.dep)[0];
+    const best = js.filter((j) => j.arr != null).sort((a, b) => a.arr - b.arr || a.dep - b.dep)[0];
     if (best) {
       html += '<div class="card best"><div class="tag">Take</div>' +
         '<div class="when">' + chain(best) + ' ' + mins(best.dep) + '<span class="u">min</span></div>' +
@@ -164,7 +162,7 @@ footer a{color:var(--mute)}
     if (rest.length) {
       html += '<div class="card">' + rest.map((j) => {
         const delta = best && j.arr ? j.arr - best.arr : null;
-        return '<div class="row' + (j.missed ? ' missed' : '') + '">' + chain(j) +
+        return '<div class="row">' + chain(j) +
           '<div><div class="t">' + mins(j.dep) + ' min</div><div class="d">' + via(j) + '</div></div>' +
           '<div class="a">' + (j.arr ? clock(j.arr) : '—') + '<small>' +
           (j.arr == null ? 'no connection yet' : delta > 0 ? '+' + Math.round(delta / 60) + ' min' : delta === 0 ? 'same train' : '') +

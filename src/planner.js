@@ -10,8 +10,8 @@
 //        A|C>STOP>E               any of several lines for a leg
 //        ...:3                    transfer time override in minutes for this route
 //   x  default transfer time in minutes (walking between platforms), default 2
-//   k  minutes needed to reach the first platform (trains sooner are shown as missed), default 0
-// The "to home" direction is the same routes reversed.
+// The "to home" direction is the same routes reversed. Every train is shown as if you
+// are already on the platform; any other params (e.g. an old k=) are ignored.
 
 export const FEEDS = {
   ace: ['A', 'C', 'E', 'H', 'FS'],
@@ -40,13 +40,12 @@ export function parseConfig(params) {
   const work = (params.get('w') || '').toUpperCase();
   const routesRaw = params.get('r') || '';
   const xfer = numberParam(params.get('x'), 2);
-  const walk = numberParam(params.get('k'), 0);
   if (!STOP_RE.test(home)) throw new ConfigError('h (origin stop id) is missing or invalid');
   if (!STOP_RE.test(work)) throw new ConfigError('w (destination stop id) is missing or invalid');
   const routes = routesRaw.split(',').filter(Boolean).map((spec) => parseRoute(spec.toUpperCase(), xfer));
   if (!routes.length) throw new ConfigError('r (routes) is missing');
   if (routes.length > 6) throw new ConfigError('at most 6 routes');
-  return { home, work, routes, walk };
+  return { home, work, routes };
 }
 
 function numberParam(v, dflt) {
@@ -156,7 +155,7 @@ function legOptions(index, lines, from, to, after) {
 const MAX_FIRST = 4;
 const GRACE = 15; // seconds: a train "arriving now" still shows as 0 min
 
-export function planDirection(index, routes, now, walkMin) {
+export function planDirection(index, routes, now) {
   const journeys = [];
   const boards = new Map();
   routes.forEach((route, ri) => {
@@ -183,7 +182,6 @@ export function planDirection(index, routes, now, walkMin) {
         legs,
         dep: o.dep,
         arr: complete ? last.arr : null,
-        missed: o.dep < now + walkMin * 60,
       };
       // Two earlier trains that make the same final connection: keep the later one.
       if (complete) {
@@ -202,7 +200,7 @@ export function planDirection(index, routes, now, walkMin) {
     if (b.arr != null) return 1;
     return a.dep - b.dep;
   });
-  const best = list.find((j) => j.arr != null && !j.missed);
+  const best = list.find((j) => j.arr != null);
   if (best) best.best = true;
   const boardList = [...boards.entries()].map(([line, deps]) => ({
     line,

@@ -31,7 +31,7 @@ export async function buildPlan(params, loadFeed, now = Math.floor(Date.now() / 
     const routes = directionLegs(config, dir);
     dirs[dir] = {
       origin: dir === 'work' ? config.home : config.work,
-      ...planDirection(index, routes, now, config.walk),
+      ...planDirection(index, routes, now),
     };
     for (const r of routes) for (const l of r.legs) { stopIds.add(l.from); stopIds.add(l.to); }
   }
