@@ -5,6 +5,7 @@ import {
   ConfigError, directionLegs, feedsFor, indexTrips, linesFor, parseConfig, planDirection,
 } from '../src/planner.js';
 import { NOW, encodeFeed, scenario } from './fixtures.js';
+import { buildPlan } from '../src/plan.js';
 
 const params = (s) => new URLSearchParams(s);
 
@@ -107,4 +108,12 @@ test('config validation and feed selection', () => {
   assert.deepEqual(feedsFor(c).sort(), ['ace', 'bdfm', 'g']);
   const home = directionLegs(c, 'home')[0].legs;
   assert.deepEqual(home.map((l) => [l.from, l.to]), [['W01', 'T09'], ['T01', 'H01']]);
+});
+
+test('buildPlan uses the station names it is given, else stop ids', async () => {
+  const load = async (_k, wanted) => decodeFeed(encodeFeed(NOW, scenario()), (r) => wanted.has(r));
+  const q = params('h=H01&w=W01&r=N>T02>7&n=H01~Home Sq|T02~Swap St');
+  const res = await buildPlan(q, load, { names: { H01: 'Home Sq', T02: 'Swap St' }, now: NOW });
+  assert.deepEqual(res.names, { H01: 'Home Sq', W01: 'W01', T02: 'Swap St' });
+  assert.ok(res.dirs.work.journeys.length);
 });

@@ -25,7 +25,7 @@ http.createServer(async (req, res) => {
     if (url.pathname === '/setup') return send(200, 'text/html', page('setup.html'));
     if (url.pathname === '/api/stops') return send(200, 'application/json', JSON.stringify(STOP_NAMES));
     if (url.pathname === '/api/plan') {
-      return send(200, 'application/json', JSON.stringify(await buildPlan(url.searchParams, fixtureFeed)));
+      return send(200, 'application/json', JSON.stringify(await buildPlan(url.searchParams, fixtureFeed, { names: STOP_NAMES })));
     }
     send(404, 'text/plain', 'Not found');
   } catch (e) {

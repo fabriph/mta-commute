@@ -82,6 +82,16 @@ code{background:var(--card);padding:1px 5px;border-radius:5px;font-size:14px}
     if (w) p.set('w', w);
     if (r) p.set('r', r);
     if ($('x').value !== '2') p.set('x', $('x').value);
+    // Bake the names of the stations this commute uses into the link, so the
+    // timetable page never has to download the full station list.
+    const ids = new Set([h, w]);
+    for (const route of r.split(',')) {
+      route.replace(/:[\d.]+$/, '').split('>').forEach((part, i) => {
+        if (i % 2) part.split('/').forEach((id) => ids.add(id));
+      });
+    }
+    const named = [...ids].filter((id) => stops[id]);
+    if (named.length) p.set('n', named.map((id) => id + '~' + stops[id]).join('|'));
     const ready = h && w && r;
     const url = base + '#' + p.toString();
     $('url').textContent = ready ? url : 'Fill in the fields to get your link.';

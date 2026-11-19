@@ -105,6 +105,11 @@ footer a{color:var(--mute)}
     const [{buildPlan}, {decodeFeed}, {FEED_URL}] = await Promise.all([
       import('./plan.js'), import('./gtfsrt.js'), import('./planner.js'),
     ]);
+    // Station names come baked into the link by the setup page ("n=ID~Name|ID~Name").
+    // Older links without them fall back to the full station list.
+    const names = params.get('n')
+      ? Object.fromEntries(params.get('n').split('|').map((e) => e.split('~')))
+      : (await import('./stops.js')).STOP_NAMES;
     return buildPlan(new URLSearchParams(query), async (key, wanted) => {
       try {
         const res = await fetch(FEED_URL(key), {signal, cache: 'no-store'});
@@ -114,7 +119,7 @@ footer a{color:var(--mute)}
         if (e.name === 'AbortError') throw e;
         return {error: String(e.message || e)};
       }
-    });
+    }, {names});
   }
 
   let dir;

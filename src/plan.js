@@ -1,14 +1,15 @@
 import {
   directionLegs, feedsFor, indexTrips, linesFor, parseConfig, planDirection,
 } from './planner.js';
-import { STOP_NAMES } from './stops.js';
 
 /**
  * Build the /api/plan response.
  * @param {URLSearchParams} params
  * @param {(feedKey: string, wantedLines: Set<string>) => Promise<{timestamp?: number, trips?: any[], error?: string}>} loadFeed
+ * @param {{names?: Record<string, string>, now?: number}} [opts] station names by stop id
+ *   (the page gets them from its link, so it never loads the full station list)
  */
-export async function buildPlan(params, loadFeed, now = Math.floor(Date.now() / 1000)) {
+export async function buildPlan(params, loadFeed, { names: stopNames = {}, now = Math.floor(Date.now() / 1000) } = {}) {
   const config = parseConfig(params);
   const wanted = linesFor(config);
   const keys = feedsFor(config);
@@ -36,6 +37,6 @@ export async function buildPlan(params, loadFeed, now = Math.floor(Date.now() / 
     for (const r of routes) for (const l of r.legs) { stopIds.add(l.from); stopIds.add(l.to); }
   }
   const names = {};
-  for (const id of stopIds) names[id] = STOP_NAMES[id] || id;
+  for (const id of stopIds) names[id] = stopNames[id] || id;
   return { now, feedTime: oldest, dirs, names, errors };
 }

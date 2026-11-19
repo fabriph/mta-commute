@@ -34,6 +34,7 @@ https://<user>.github.io/mta-commute/#h=<home stop>&w=<work stop>&r=<routes>
 | `w` | Work stop id | required |
 | `r` | Routes, written home → work, comma-separated (see below) | required |
 | `x` | Minutes to walk between platforms when transferring | `2` |
+| `n` | Station names for the stops above, `ID~Name` joined by `\|`. Added by the setup page so the timetable never downloads the full station list. | optional |
 
 Route syntax:
 

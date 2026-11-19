@@ -45,7 +45,7 @@ export default {
 
 async function plan(params) {
   try {
-    return json(await buildPlan(params, loadFeed), 200, 'no-store');
+    return json(await buildPlan(params, loadFeed, { names: STOP_NAMES }), 200, 'no-store');
   } catch (e) {
     if (e instanceof ConfigError) return json({ error: e.message }, 400);
     throw e;
