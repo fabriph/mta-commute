@@ -39,10 +39,9 @@ test('decoder skips unwanted routes and fills missing arrival/departure', () => 
   assert.equal(trips[0].stops[1].dep, NOW + 70);
 });
 
-test('to work: picks the option that arrives first, not the one that leaves first', () => {
+test('to work: options are ordered by arrival, not by departure', () => {
   const res = plan('h=H01&w=W01&r=R>T01>7,N>T02>7', 'work');
   const [best, second, third] = res.journeys;
-  assert.ok(best.best);
   assert.deepEqual(best.legs.map((l) => l.trip), ['n1b', 's2']);
   assert.equal(best.arr, NOW + 1300);
   assert.deepEqual(second.legs.map((l) => l.trip), ['r1', 's3']);
@@ -75,7 +74,6 @@ test('transfer time changes which connection is possible', () => {
 test('to home: routes are reversed', () => {
   const res = plan('h=H01&w=W01&r=R>T01>7,N>T02>7', 'home');
   const best = res.journeys[0];
-  assert.ok(best.best);
   assert.deepEqual(best.legs.map((l) => [l.line, l.from, l.to, l.trip]), [
     ['7', 'W01', 'T01', 'ss1'],
     ['R', 'T01', 'H01', 'rs2'],
@@ -87,7 +85,8 @@ test('to home: routes are reversed', () => {
 test('every catchable train is shown, even with an old walk-time param', () => {
   const res = plan('h=H01&w=W01&r=N>T02>7&k=5', 'work');
   const n1b = res.journeys.find((j) => j.legs[0].trip === 'n1b');
-  assert.ok(n1b && n1b.best, 'a train leaving in 2 min is still recommended');
+  assert.ok(n1b, 'a train leaving in 2 min is still shown');
+  assert.equal(res.journeys[0], n1b, 'and listed first');
   assert.ok(!('missed' in n1b));
 });
 

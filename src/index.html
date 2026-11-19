@@ -23,15 +23,9 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px}
 #status.busy{opacity:.6}
 #status.off{color:var(--warn)}
 .card{background:var(--card);border-radius:16px;padding:16px;margin-top:14px}
-.best .when{font-size:56px;font-weight:700;letter-spacing:-.03em;line-height:1}
-.best .when .u{font-size:22px;font-weight:600;color:var(--mute);margin-left:4px}
-.best .meta{margin-top:10px;color:var(--mute)}
-.best .meta b{color:var(--fg);font-weight:600}
-.tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--good);margin-bottom:10px}
 .chain{display:inline-flex;align-items:center;gap:4px;vertical-align:middle}
 .chain i{font-style:normal;color:var(--mute);font-size:13px}
 .b{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;font-weight:700;font-size:15px;color:#fff}
-.best .b{width:34px;height:34px;font-size:19px}
 .row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--line)}
 .row:first-of-type{border-top:0}
 .row .t{font-size:22px;font-weight:650;min-width:64px}
@@ -159,22 +153,13 @@ footer a{color:var(--mute)}
     // Recomputed on every render so saved data stays correct while offline.
     const js = d.journeys.filter((j) => j.dep >= t - 30);
     let html = '';
-    const best = js.filter((j) => j.arr != null).sort((a, b) => a.arr - b.arr || a.dep - b.dep)[0];
-    if (best) {
-      html += '<div class="card best"><div class="tag">Take</div>' +
-        '<div class="when">' + chain(best) + ' ' + mins(best.dep) + '<span class="u">min</span></div>' +
-        '<div class="meta">Arrive <b>' + clock(best.arr) + '</b> · ' + via(best) + '</div></div>';
-    }
-    const rest = js.filter((j) => j !== best);
-    if (rest.length) {
-      html += '<div class="card">' + rest.map((j) => {
-        const delta = best && j.arr ? j.arr - best.arr : null;
-        return '<div class="row">' + chain(j) +
-          '<div><div class="t">' + mins(j.dep) + ' min</div><div class="d">' + via(j) + '</div></div>' +
-          '<div class="a">' + (j.arr ? clock(j.arr) : '—') + '<small>' +
-          (j.arr == null ? 'no connection yet' : delta > 0 ? '+' + Math.round(delta / 60) + ' min' : delta === 0 ? 'same train' : '') +
-          '</small></div></div>';
-      }).join('') + '</div>';
+    // Options in order of arrival; no pick is highlighted, the rider decides.
+    if (js.length) {
+      html += '<div class="card">' + js.map((j) =>
+        '<div class="row">' + chain(j) +
+        '<div><div class="t">' + mins(j.dep) + ' min</div><div class="d">' + via(j) + '</div></div>' +
+        '<div class="a">' + (j.arr ? clock(j.arr) : '—') + '<small>' + (j.arr ? 'arrive' : 'no connection yet') + '</small></div></div>'
+      ).join('') + '</div>';
     }
     if (!js.length) html += '<div class="card empty">No trains in the feed right now.</div>';
     // Next trains at the origin and at each transfer station (older saved data has only the origin).

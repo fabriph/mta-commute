@@ -208,8 +208,6 @@ export function planDirection(index, routes, now) {
     if (b.arr != null) return 1;
     return a.dep - b.dep;
   });
-  const best = list.find((j) => j.arr != null);
-  if (best) best.best = true;
   const stations = [...boards.entries()].map(([stop, lines]) => ({
     stop,
     boards: [...lines.entries()].map(([line, deps]) => ({
