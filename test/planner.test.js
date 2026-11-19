@@ -61,7 +61,7 @@ test('departed trains and wrong-direction trips are excluded', () => {
   const firsts = res.journeys.map((j) => j.legs[0].trip);
   assert.ok(!firsts.includes('r0'));
   assert.ok(!firsts.includes('rs'));
-  const r = res.boards.find((b) => b.line === 'R');
+  const r = res.stations[0].boards.find((b) => b.line === 'R');
   assert.deepEqual(r.deps, [NOW + 360]);
 });
 
@@ -116,4 +116,16 @@ test('buildPlan uses the station names it is given, else stop ids', async () => 
   const res = await buildPlan(q, load, { names: { H01: 'Home Sq', T02: 'Swap St' }, now: NOW });
   assert.deepEqual(res.names, { H01: 'Home Sq', W01: 'W01', T02: 'Swap St' });
   assert.ok(res.dirs.work.journeys.length);
+});
+
+test('departure boards cover the origin and every transfer station, in direction of travel', () => {
+  const work = plan('h=H01&w=W01&r=R>T01>7,N>T02>7', 'work');
+  assert.deepEqual(work.stations.map((s) => s.stop), ['H01', 'T01', 'T02']);
+  const t01 = work.stations[1].boards;
+  assert.deepEqual(t01.map((b) => b.line), ['7']);
+  assert.deepEqual(t01[0].deps, [NOW + 320, NOW + 620, NOW + 920], 'northbound 7s at T01');
+  const home = plan('h=H01&w=W01&r=R>T01>7,N>T02>7', 'home');
+  assert.deepEqual(home.stations.map((s) => s.stop), ['W01', 'T01', 'T02']);
+  assert.deepEqual(home.stations[1].boards, [{ line: 'R', deps: [NOW + 30, NOW + 900] }], 'southbound Rs at T01');
+  assert.deepEqual(home.stations[2].boards, [{ line: 'N', deps: [NOW + 1000] }]);
 });

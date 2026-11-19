@@ -157,14 +157,22 @@ const GRACE = 15; // seconds: a train "arriving now" still shows as 0 min
 
 export function planDirection(index, routes, now) {
   const journeys = [];
-  const boards = new Map();
+  // Departure boards: the origin, then every transfer station inferred from the
+  // routes, each listing the lines you'd board there (in the right direction).
+  const boards = new Map(); // stop -> Map(line -> Set(dep))
+  const addBoard = (stop, opts) => {
+    if (!boards.has(stop)) boards.set(stop, new Map());
+    const lines = boards.get(stop);
+    for (const o of opts) {
+      if (!lines.has(o.line)) lines.set(o.line, new Set());
+      lines.get(o.line).add(o.dep);
+    }
+  };
   routes.forEach((route, ri) => {
     const [first, ...rest] = route.legs;
     const firstOpts = legOptions(index, first.lines, first.from, first.to, now - GRACE);
-    for (const o of firstOpts) {
-      if (!boards.has(o.line)) boards.set(o.line, new Set());
-      boards.get(o.line).add(o.dep);
-    }
+    addBoard(first.from, firstOpts);
+    for (const leg of rest) addBoard(leg.from, legOptions(index, leg.lines, leg.from, leg.to, now - GRACE));
     const seenFinal = new Map();
     for (const o of firstOpts.slice(0, MAX_FIRST)) {
       const legs = [o];
@@ -202,9 +210,12 @@ export function planDirection(index, routes, now) {
   });
   const best = list.find((j) => j.arr != null);
   if (best) best.best = true;
-  const boardList = [...boards.entries()].map(([line, deps]) => ({
-    line,
-    deps: [...deps].sort((a, b) => a - b).slice(0, 4),
+  const stations = [...boards.entries()].map(([stop, lines]) => ({
+    stop,
+    boards: [...lines.entries()].map(([line, deps]) => ({
+      line,
+      deps: [...deps].sort((a, b) => a - b).slice(0, 4),
+    })),
   }));
-  return { journeys: list.slice(0, 6), boards: boardList };
+  return { journeys: list.slice(0, 6), stations };
 }

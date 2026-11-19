@@ -38,6 +38,8 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .row .d{color:var(--mute);font-size:14px}
 .row .a{text-align:right;font-size:15px}
 .row .a small{display:block;color:var(--mute);font-size:12px}
+html{touch-action:manipulation} /* no double-tap zoom; pinch zoom still works */
+.station+.station{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 h2{font-size:13px;font-weight:600;color:var(--mute);text-transform:uppercase;letter-spacing:.06em;margin:0 0 6px}
 .board{display:flex;align-items:center;gap:12px;padding:8px 0}
 .board .ts{font-size:20px;font-weight:600;letter-spacing:-.01em}
@@ -175,11 +177,15 @@ footer a{color:var(--mute)}
       }).join('') + '</div>';
     }
     if (!js.length) html += '<div class="card empty">No trains in the feed right now.</div>';
-    const boards = d.boards.map((b) => ({line: b.line, deps: b.deps.filter((x) => x >= t - 30).slice(0, 3)})).filter((b) => b.deps.length);
-    if (boards.length) {
-      html += '<div class="card"><h2>At ' + esc(name(d.origin)) + '</h2>' + boards.map((b) =>
+    // Next trains at the origin and at each transfer station (older saved data has only the origin).
+    const stations = (d.stations || [{stop: d.origin, boards: d.boards || []}]).map((s) => ({
+      stop: s.stop,
+      boards: s.boards.map((b) => ({line: b.line, deps: b.deps.filter((x) => x >= t - 30).slice(0, 3)})).filter((b) => b.deps.length),
+    })).filter((s) => s.boards.length);
+    if (stations.length) {
+      html += '<div class="card">' + stations.map((s) => '<div class="station"><h2>At ' + esc(name(s.stop)) + '</h2>' + s.boards.map((b) =>
         '<div class="board">' + bullet(b.line) + '<div class="ts">' + b.deps.map(mins).join(' <span>·</span> ') + ' <span>min</span></div></div>'
-      ).join('') + '</div>';
+      ).join('') + '</div>').join('') + '</div>';
     }
     $('out').innerHTML = html;
   }
