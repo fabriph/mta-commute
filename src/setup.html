@@ -36,9 +36,10 @@ code{background:var(--card);padding:1px 5px;border-radius:5px;font-size:14px}
 <label>Routes<small>Written home → work, comma-separated. <code>1</code> is a direct ride. <code>2&gt;127&gt;7</code> rides the 2 to stop 127, then the 7. <code>A|C&gt;…</code> means either line. Add <code>:3</code> to a route to set its transfer time.</small><input id="r" placeholder="e.g. 2>127>7,1" autocapitalize="characters" autocomplete="off"></label>
 <div class="grid">
 <label>Transfer<small>minutes</small><input id="x" type="number" min="0" max="30" step="0.5" value="2"></label>
-<label>To platform<small>minutes</small><input id="k" type="number" min="0" max="30" value="0"></label>
+<label>Walk to station<small>minutes to the platform</small><input id="k" type="number" min="0" max="30" value="0"></label>
 <label>Home after<small>hour, 0–23</small><input id="s" type="number" min="0" max="23" value="13"></label>
 </div>
+<p style="margin-top:8px;font-size:14px"><b>Walk to station:</b> how long it takes you to reach the first platform. Trains leaving sooner than that are greyed out and never recommended. The same value is used for both directions.</p>
 <datalist id="stations"></datalist>
 
 <div class="out" id="url">Fill in the fields to get your link.</div>

@@ -113,7 +113,7 @@ footer a{color:var(--mute)}
   const mins = (t) => Math.max(0, Math.floor((t - now()) / 60));
   // Subway times are always shown in New York time, wherever the phone thinks it is.
   const TZ = 'America/New_York';
-  const clock = (t) => new Date(t * 1000).toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit', timeZone: TZ}).replace(/\s?[AP]M$/i, '');
+  const clock = (t) => new Date(t * 1000).toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: TZ});
   const nyHour = () => Number(new Intl.DateTimeFormat('en-US', {hour: 'numeric', hourCycle: 'h23', timeZone: TZ}).format(new Date()));
   const name = (id) => (data && data.names[id]) || id;
   const chain = (j) => '<span class="chain">' + j.legs.map((l) => bullet(l.line)).join('<i>›</i>') + '</span>';
