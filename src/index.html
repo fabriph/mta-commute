@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <!--MODE-->
-<link rel="manifest" href="manifest.webmanifest">
+<link rel="manifest" id="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg">
 <link rel="apple-touch-icon" href="icon.svg">
 <title>Commute</title>
@@ -70,6 +70,22 @@ footer a{color:var(--mute)}
   } catch (e) {}
   if (!cfg) { location.replace('setup.html'); return; }
   $('edit').href = 'setup.html#' + cfg;
+
+  // "Add to Home Screen" launches the manifest's start_url, and the home-screen app
+  // doesn't share Safari's storage. Point start_url at this exact link (stations
+  // included) so the installed app opens straight to the timetable. iOS reads the
+  // manifest when the Share sheet opens, so swapping it in now is early enough.
+  try {
+    const here = location.href.split('#')[0];
+    const abs = (p) => new URL(p, here).href;
+    const manifest = {
+      name: 'Commute', short_name: 'Commute', display: 'standalone',
+      start_url: here + '#' + cfg, scope: abs('./'), id: abs('./'),
+      background_color: '#0b0b0c', theme_color: '#0b0b0c',
+      icons: [{src: abs('icon.svg'), sizes: 'any', type: 'image/svg+xml'}],
+    };
+    $('manifest').href = 'data:application/manifest+json,' + encodeURIComponent(JSON.stringify(manifest));
+  } catch (e) {}
 
   const params = new URLSearchParams(cfg);
   const SPLIT_HOUR = 13; // before 13:00 New York time: to work; after: to home
