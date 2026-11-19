@@ -17,7 +17,7 @@ p{color:var(--mute);margin:0 0 16px}
 label{display:block;margin-top:16px;font-weight:600;font-size:14px}
 label small{display:block;color:var(--mute);font-weight:400;margin-top:2px}
 input{width:100%;margin-top:6px;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:16px}
-.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 code{background:var(--card);padding:1px 5px;border-radius:5px;font-size:14px}
 .out{margin-top:22px;background:var(--card);border-radius:12px;padding:14px;word-break:break-all;font-size:14px;color:var(--mute)}
 .btns{display:flex;gap:10px;margin-top:12px}
@@ -29,15 +29,14 @@ code{background:var(--card);padding:1px 5px;border-radius:5px;font-size:14px}
 <body>
 <main>
 <h1>Set up your commute</h1>
-<p>Your stations live only in the link you generate (after the <code>#</code>), never in the code. Your Worker sees them only while looking up train times and doesn't store them. Bookmark the link or add it to your home screen.</p>
+<p>Your stations live only in the link you generate (after the <code>#</code>) and on this device, never in the code. Bookmark the link or add it to your home screen.</p>
 
 <label>Home station<small>Start of the trip to work</small><input id="h" list="stations" placeholder="Search a station" autocomplete="off"></label>
 <label>Work station<small>End of the trip to work</small><input id="w" list="stations" placeholder="Search a station" autocomplete="off"></label>
 <label>Routes<small>Written home → work, comma-separated. <code>1</code> is a direct ride. <code>2&gt;127&gt;7</code> rides the 2 to stop 127, then the 7. <code>A|C&gt;…</code> means either line. Add <code>:3</code> to a route to set its transfer time.</small><input id="r" placeholder="e.g. 2>127>7,1" autocapitalize="characters" autocomplete="off"></label>
 <div class="grid">
-<label>Transfer<small>minutes</small><input id="x" type="number" min="0" max="30" step="0.5" value="2"></label>
 <label>Walk to station<small>minutes to the platform</small><input id="k" type="number" min="0" max="30" value="0"></label>
-<label>Home after<small>hour, 0–23</small><input id="s" type="number" min="0" max="23" value="13"></label>
+<label>Transfer<small>minutes</small><input id="x" type="number" min="0" max="30" step="0.5" value="2"></label>
 </div>
 <p style="margin-top:8px;font-size:14px"><b>Walk to station:</b> how long it takes you to reach the first platform. Trains leaving sooner than that are greyed out and never recommended. The same value is used for both directions.</p>
 <datalist id="stations"></datalist>
@@ -49,7 +48,7 @@ code{background:var(--card);padding:1px 5px;border-radius:5px;font-size:14px}
 <script type="module">
 (() => {
   const $ = (id) => document.getElementById(id);
-  const fields = ['h', 'w', 'r', 'x', 'k', 's'];
+  const fields = ['h', 'w', 'r', 'x', 'k'];
   let stops = {};
   const label = (id) => stops[id] ? stops[id] + ' · ' + id : id;
   const toId = (v) => {
@@ -85,7 +84,6 @@ code{background:var(--card);padding:1px 5px;border-radius:5px;font-size:14px}
     if (r) p.set('r', r);
     if ($('x').value !== '2') p.set('x', $('x').value);
     if ($('k').value && $('k').value !== '0') p.set('k', $('k').value);
-    if ($('s').value !== '13') p.set('s', $('s').value);
     const ready = h && w && r;
     const url = base + '#' + p.toString();
     $('url').textContent = ready ? url : 'Fill in the fields to get your link.';

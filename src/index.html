@@ -18,8 +18,9 @@ html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.35 -apple-sy
 main{max-width:520px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 14px) 16px 40px}
 header{display:flex;align-items:center;justify-content:space-between;gap:12px}
 #dir{all:unset;cursor:pointer;font-size:26px;font-weight:700;letter-spacing:-.02em}
-#dir small{font-size:15px;font-weight:500;color:var(--mute);margin-left:6px}
-#status{font-size:13px;color:var(--mute);text-align:right}
+#dir small{font-size:18px;font-weight:500;color:var(--mute);margin-left:6px}
+#status{all:unset;cursor:pointer;font-size:13px;color:var(--mute);text-align:right;padding:10px 0 10px 16px;margin:-10px 0;-webkit-tap-highlight-color:transparent}
+#status.busy{opacity:.6}
 #status.off{color:var(--warn)}
 .card{background:var(--card);border-radius:16px;padding:16px;margin-top:14px}
 .best .when{font-size:56px;font-weight:700;letter-spacing:-.03em;line-height:1}
@@ -49,7 +50,7 @@ footer a{color:var(--mute)}
 </head>
 <body>
 <main>
-<header><button id="dir" aria-label="Switch direction"></button><div id="status"></div></header>
+<header><button id="dir" aria-label="Switch direction"></button><button id="status" aria-label="Refresh"></button></header>
 <div id="out"></div>
 <footer><span id="err"></span><a id="edit" href="setup.html">Edit</a></footer>
 </main>
@@ -71,7 +72,7 @@ footer a{color:var(--mute)}
   $('edit').href = 'setup.html#' + cfg;
 
   const params = new URLSearchParams(cfg);
-  const split = Number(params.get('s') || 13);
+  const SPLIT_HOUR = 13; // before 13:00 New York time: to work; after: to home
   params.delete('s');
   const query = params.toString();
   const cacheKey = 'plan:' + query;
@@ -119,14 +120,15 @@ footer a{color:var(--mute)}
   const chain = (j) => '<span class="chain">' + j.legs.map((l) => bullet(l.line)).join('<i>›</i>') + '</span>';
   const via = (j) => j.legs.length > 1 ? j.legs.slice(1).map((l, i) => l.line + ' at ' + esc(name(j.legs[i].to)) + ' ' + clock(l.dep)).join(', ') : 'direct';
 
-  dir = nyHour() < split ? 'work' : 'home';
+  dir = nyHour() < SPLIT_HOUR ? 'work' : 'home';
 
   function render() {
     $('dir').innerHTML = (dir === 'work' ? 'To work' : 'To home') + '<small>⇄</small>';
     const age = fetchedAt ? Math.round(now() - fetchedAt) : null;
     const st = $('status');
-    st.className = ok ? '' : 'off';
-    st.textContent = loading && !data ? 'Loading…'
+    st.className = (ok ? '' : 'off') + (loading ? ' busy' : '');
+    // Saved times stay on screen while a refresh is in flight.
+    st.textContent = loading ? (data ? 'Updating…' : 'Loading…')
       : age == null ? 'Offline'
       : (ok ? 'Live' : 'Offline') + ' · ' + (age < 60 ? age + ' s' : Math.round(age / 60) + ' min') + ' ago';
     if (!data) { $('out').innerHTML = ''; return; }
@@ -187,6 +189,7 @@ footer a{color:var(--mute)}
   }
 
   $('dir').onclick = () => { dir = dir === 'work' ? 'home' : 'work'; render(); };
+  $('status').onclick = () => load();
   render();
   load();
   setInterval(() => { if (!document.hidden) load(); }, 30000);

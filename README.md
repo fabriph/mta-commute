@@ -18,7 +18,7 @@ line happens to come right away, it can still be the faster choice, and the page
   with a "x min ago" marker. Countdowns keep ticking from absolute times, so they stay
   useful offline.
 - The direction switches automatically: before 13:00 (New York time) it shows the trip to
-  work, after that the trip home. Tap the title to flip it.
+  work, after that the trip home. Tap the title to flip it. Tap the status (top right) to refresh without clearing the screen.
 
 ## Configure
 
@@ -34,8 +34,7 @@ https://<user>.github.io/mta-commute/#h=<home stop>&w=<work stop>&r=<routes>
 | `w` | Work stop id | required |
 | `r` | Routes, written home → work, comma-separated (see below) | required |
 | `x` | Minutes to walk between platforms when transferring | `2` |
-| `k` | Minutes to reach the first platform. Sooner trains are shown as missed. | `0` |
-| `s` | Hour (0–23, New York time) from which the page shows the trip home | `13` |
+| `k` | Minutes to walk to the first platform. Sooner trains are shown as missed. | `0` |
 
 Route syntax:
 
