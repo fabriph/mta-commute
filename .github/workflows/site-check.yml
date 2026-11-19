@@ -16,4 +16,9 @@ jobs:
             echo "$code $base$p"
             [ "$code" = 200 ] || fail=1
           done
+          echo "--- headers for index.html"
+          curl -s -D - -o /dev/null -H "Accept-Encoding: gzip, br" "$base" | grep -iE "^(cache-control|content-encoding|content-length|etag|last-modified)"
+          echo "--- headers for icon-180.png"
+          curl -s -D - -o /dev/null "${base}icon-180.png" | grep -iE "^(cache-control|content-length|etag)"
+
           exit ${fail:-0}

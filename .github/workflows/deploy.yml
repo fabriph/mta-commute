@@ -29,6 +29,15 @@ jobs:
           cache: npm
       - run: npm ci
       - run: node scripts/live-check.mjs
+      - name: Feed transfer sizes (with and without compression)
+        run: |
+          for f in gtfs-ace gtfs-bdfm gtfs-g gtfs; do
+            u="https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2F$f"
+            plain=$(curl -s -o /dev/null -w "%{size_download}" "$u")
+            enc=$(curl -s -D - -o /dev/null -H "Accept-Encoding: gzip, br" "$u" | grep -i '^content-encoding' | tr -d '\r')
+            wire=$(curl -s -o /dev/null -w "%{size_download}" -H "Accept-Encoding: gzip, br" "$u")
+            echo "$f plain=${plain}B wire=${wire}B ${enc:-content-encoding: none}"
+          done
 
   pages:
     # Publishes the static site to the gh-pages branch (served by GitHub Pages).
