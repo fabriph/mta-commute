@@ -6,7 +6,13 @@ workers_dev = true
 # Serve .html files as text imports.
 [[rules]]
 type = "Text"
-globs = ["**/*.html", "**/*.svg", "**/*.webmanifest"]
+globs = ["**/*.html", "**/*.webmanifest"]
+fallthrough = true
+
+# Serve images as binary imports.
+[[rules]]
+type = "Data"
+globs = ["**/*.png"]
 fallthrough = true
 
 [observability]

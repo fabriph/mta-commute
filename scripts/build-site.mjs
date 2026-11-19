@@ -5,7 +5,7 @@ import { cpSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 const out = new URL('../_site/', import.meta.url);
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out);
-for (const f of ['index.html', 'setup.html', 'manifest.webmanifest', 'icon.svg',
+for (const f of ['index.html', 'setup.html', 'manifest.webmanifest', 'icon-180.png',
   'gtfsrt.js', 'planner.js', 'plan.js', 'stops.js']) {
   cpSync(new URL('../src/' + f, import.meta.url), new URL(f, out));
 }

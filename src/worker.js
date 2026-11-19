@@ -6,7 +6,7 @@ import SETUP_HTML from './setup.html';
 import { STOP_NAMES } from './stops.js';
 
 import MANIFEST from './manifest.webmanifest';
-import ICON_SVG from './icon.svg';
+import ICON_PNG from './icon-180.png';
 
 // Tells the pages to ask this Worker for plans instead of decoding feeds in the browser.
 const API_META = '<meta name="mode" content="api">';
@@ -31,8 +31,8 @@ export default {
         return text(SETUP, 'text/html; charset=utf-8', 'public, max-age=300');
       case '/manifest.webmanifest':
         return text(MANIFEST, 'application/manifest+json', 'public, max-age=86400');
-      case '/icon.svg':
-        return text(ICON_SVG, 'image/svg+xml', 'public, max-age=86400');
+      case '/icon-180.png':
+        return new Response(ICON_PNG, { headers: { 'content-type': 'image/png', 'cache-control': 'public, max-age=86400' } });
       case '/api/stops':
         return json(STOP_NAMES, 200, 'public, max-age=86400');
       case '/api/plan':

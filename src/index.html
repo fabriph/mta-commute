@@ -8,8 +8,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <!--MODE-->
 <link rel="manifest" id="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon.svg">
-<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" href="icon-180.png">
+<link rel="apple-touch-icon" href="icon-180.png">
 <title>Commute</title>
 <style>
 :root{--bg:#0b0b0c;--fg:#f4f4f5;--mute:#8b8b93;--card:#17171a;--line:#26262b;--good:#34d399;--warn:#fbbf24}
@@ -82,7 +82,7 @@ footer a{color:var(--mute)}
       name: 'Commute', short_name: 'Commute', display: 'standalone',
       start_url: here + '#' + cfg, scope: abs('./'), id: abs('./'),
       background_color: '#0b0b0c', theme_color: '#0b0b0c',
-      icons: [{src: abs('icon.svg'), sizes: 'any', type: 'image/svg+xml'}],
+      icons: [{src: abs('icon-180.png'), sizes: '180x180', type: 'image/png'}],
     };
     $('manifest').href = 'data:application/manifest+json,' + encodeURIComponent(JSON.stringify(manifest));
   } catch (e) {}
