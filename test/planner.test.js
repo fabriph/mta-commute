@@ -55,13 +55,12 @@ test('every train is an option, even when an earlier one makes the same connecti
   assert.ok(firsts.includes('n1') && firsts.includes('n1b'));
 });
 
-test('options cover the same trains as the origin board, per line', () => {
+test('options include every first train leaving within the window, regardless of count', () => {
   const res = plan('h=H01&w=W01&r=R|N>T02>7', 'work');
-  const board = res.stations[0].boards;
-  for (const b of board) {
-    const deps = res.journeys.filter((j) => j.legs[0].line === b.line).map((j) => j.dep).sort();
-    assert.deepEqual(deps, b.deps, `line ${b.line}`);
-  }
+  const firsts = res.journeys.map((j) => j.legs[0].trip).sort();
+  assert.deepEqual(firsts, ['n1', 'n1b', 'n2'], 'all N trains within 20 min (R trains here never reach T02)');
+  const late = plan('h=H01&w=W01&r=N>T02>7', 'work', NOW - 1200);
+  assert.ok(!late.journeys.some((j) => j.legs[0].trip === 'n2'), 'n2 is 30 min out from that time');
 });
 
 test('departed trains and wrong-direction trips are excluded', () => {

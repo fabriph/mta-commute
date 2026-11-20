@@ -151,14 +151,8 @@ footer a{color:var(--mute)}
     const d = data.dirs[dir];
     const t = now();
     // Recomputed on every render so saved data stays correct while offline.
-    // The same trains the boards show: the next 3 per route and first line.
-    const shown = new Map();
-    const js = d.journeys.filter((j) => {
-      if (j.dep < t - 30) return false;
-      const k = j.route + ':' + j.legs[0].line;
-      shown.set(k, (shown.get(k) || 0) + 1);
-      return shown.get(k) <= 3;
-    });
+    // Options: every train leaving in the next 15 minutes (boards below keep their own limit).
+    const js = d.journeys.filter((j) => j.dep >= t - 30 && j.dep <= t + 15 * 60);
     let html = '';
     // Options in order of arrival; no pick is highlighted, the rider decides.
     if (js.length) {

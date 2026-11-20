@@ -152,9 +152,11 @@ function legOptions(index, lines, from, to, after) {
   return out;
 }
 
-// Trains per first-leg line to build options for; matches the departure boards,
-// so every train shown on a board also appears as an option.
+// Trains per line on the departure boards.
 const PER_LINE = 4;
+// Options are built for every first train leaving within this window. The page
+// shows the next 15 minutes; the extra 5 keep saved data useful for a while offline.
+const OPTION_WINDOW = 20 * 60;
 const GRACE = 15; // seconds: a train "arriving now" still shows as 0 min
 
 export function planDirection(index, routes, now) {
@@ -175,13 +177,7 @@ export function planDirection(index, routes, now) {
     const firstOpts = legOptions(index, first.lines, first.from, first.to, now - GRACE);
     addBoard(first.from, firstOpts);
     for (const leg of rest) addBoard(leg.from, legOptions(index, leg.lines, leg.from, leg.to, now - GRACE));
-    const perLine = new Map();
-    const firsts = firstOpts.filter((o) => {
-      const n = (perLine.get(o.line) || 0) + 1;
-      perLine.set(o.line, n);
-      return n <= PER_LINE;
-    });
-    for (const o of firsts) {
+    for (const o of firstOpts.filter((x) => x.dep <= now + OPTION_WINDOW)) {
       const legs = [o];
       let complete = true;
       for (const leg of rest) {
