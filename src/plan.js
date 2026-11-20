@@ -15,6 +15,7 @@ export async function buildPlan(params, loadFeed, { names: stopNames = {}, now =
   const keys = feedsFor(config);
   const results = await Promise.all(keys.map((k) => loadFeed(k, wanted)));
   const trips = [];
+  const seen = new Set();
   const errors = [];
   let oldest = null;
   results.forEach((r, i) => {
@@ -22,7 +23,12 @@ export async function buildPlan(params, loadFeed, { names: stopNames = {}, now =
       errors.push(`${keys[i] || '1-7'}: ${r.error}`);
       return;
     }
-    trips.push(...r.trips);
+    // A trip should only be in one feed, but never count the same trip twice.
+    for (const t of r.trips) {
+      if (seen.has(t.id)) continue;
+      seen.add(t.id);
+      trips.push(t);
+    }
     if (r.timestamp && (oldest == null || r.timestamp < oldest)) oldest = r.timestamp;
   });
   const index = indexTrips(trips);

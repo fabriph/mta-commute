@@ -151,14 +151,21 @@ footer a{color:var(--mute)}
     const d = data.dirs[dir];
     const t = now();
     // Recomputed on every render so saved data stays correct while offline.
-    const js = d.journeys.filter((j) => j.dep >= t - 30);
+    // The same trains the boards show: the next 3 per route and first line.
+    const shown = new Map();
+    const js = d.journeys.filter((j) => {
+      if (j.dep < t - 30) return false;
+      const k = j.route + ':' + j.legs[0].line;
+      shown.set(k, (shown.get(k) || 0) + 1);
+      return shown.get(k) <= 3;
+    });
     let html = '';
     // Options in order of arrival; no pick is highlighted, the rider decides.
     if (js.length) {
       html += '<div class="card">' + js.map((j) =>
         '<div class="row">' + chain(j) +
-        '<div><div class="t">' + mins(j.dep) + ' min</div><div class="d">' + via(j) + '</div></div>' +
-        '<div class="a">' + (j.arr ? clock(j.arr) : '—') + '<small>' + (j.arr ? 'arrive' : 'no connection yet') + '</small></div></div>'
+        '<div><div class="t">' + mins(j.dep) + ' min</div><div class="d">' + (j.arr ? via(j) : 'connection not in the feed yet') + '</div></div>' +
+        '<div class="a">' + (j.arr ? clock(j.arr) + '<small>arrive</small>' : '—') + '</div></div>'
       ).join('') + '</div>';
     }
     if (!js.length) html += '<div class="card empty">No trains in the feed right now.</div>';

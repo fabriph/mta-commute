@@ -152,7 +152,9 @@ function legOptions(index, lines, from, to, after) {
   return out;
 }
 
-const MAX_FIRST = 4;
+// Trains per first-leg line to build options for; matches the departure boards,
+// so every train shown on a board also appears as an option.
+const PER_LINE = 4;
 const GRACE = 15; // seconds: a train "arriving now" still shows as 0 min
 
 export function planDirection(index, routes, now) {
@@ -173,8 +175,13 @@ export function planDirection(index, routes, now) {
     const firstOpts = legOptions(index, first.lines, first.from, first.to, now - GRACE);
     addBoard(first.from, firstOpts);
     for (const leg of rest) addBoard(leg.from, legOptions(index, leg.lines, leg.from, leg.to, now - GRACE));
-    const seenFinal = new Map();
-    for (const o of firstOpts.slice(0, MAX_FIRST)) {
+    const perLine = new Map();
+    const firsts = firstOpts.filter((o) => {
+      const n = (perLine.get(o.line) || 0) + 1;
+      perLine.set(o.line, n);
+      return n <= PER_LINE;
+    });
+    for (const o of firsts) {
       const legs = [o];
       let complete = true;
       for (const leg of rest) {
@@ -185,23 +192,16 @@ export function planDirection(index, routes, now) {
         legs.push(next);
       }
       const last = legs[legs.length - 1];
-      const j = {
+      // Every train is kept, even when an earlier one makes the same connection.
+      journeys.push({
         route: ri,
         legs,
         dep: o.dep,
         arr: complete ? last.arr : null,
-      };
-      // Two earlier trains that make the same final connection: keep the later one.
-      if (complete) {
-        const key = last.trip;
-        const prevIdx = seenFinal.get(key);
-        if (prevIdx != null) journeys[prevIdx] = null;
-        seenFinal.set(key, journeys.length);
-      }
-      journeys.push(j);
+      });
     }
   });
-  const list = journeys.filter(Boolean);
+  const list = journeys;
   list.sort((a, b) => {
     if (a.arr != null && b.arr != null) return a.arr - b.arr || a.dep - b.dep;
     if (a.arr != null) return -1;
@@ -212,8 +212,8 @@ export function planDirection(index, routes, now) {
     stop,
     boards: [...lines.entries()].map(([line, deps]) => ({
       line,
-      deps: [...deps].sort((a, b) => a - b).slice(0, 4),
+      deps: [...deps].sort((a, b) => a - b).slice(0, PER_LINE),
     })),
   }));
-  return { journeys: list.slice(0, 6), stations };
+  return { journeys: list, stations };
 }

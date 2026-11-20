@@ -41,18 +41,27 @@ test('decoder skips unwanted routes and fills missing arrival/departure', () => 
 
 test('to work: options are ordered by arrival, not by departure', () => {
   const res = plan('h=H01&w=W01&r=R>T01>7,N>T02>7', 'work');
-  const [best, second, third] = res.journeys;
-  assert.deepEqual(best.legs.map((l) => l.trip), ['n1b', 's2']);
-  assert.equal(best.arr, NOW + 1300);
-  assert.deepEqual(second.legs.map((l) => l.trip), ['r1', 's3']);
-  assert.equal(second.arr, NOW + 1600);
-  assert.equal(third.legs[0].trip, 'n2');
-  assert.equal(third.arr, null, 'no connection in feed yet');
+  assert.deepEqual(res.journeys.map((j) => [j.legs.map((l) => l.trip).join('>'), j.arr && j.arr - NOW]), [
+    ['n1>s2', 1300],
+    ['n1b>s2', 1300],
+    ['r1>s3', 1600],
+    ['n2', null], // no connection in the feed yet
+  ]);
 });
 
-test('earlier train making the same connection is dropped in favor of the later one', () => {
+test('every train is an option, even when an earlier one makes the same connection', () => {
   const res = plan('h=H01&w=W01&r=R>T01>7,N>T02>7', 'work');
-  assert.ok(!res.journeys.some((j) => j.legs[0].trip === 'n1'));
+  const firsts = res.journeys.map((j) => j.legs[0].trip);
+  assert.ok(firsts.includes('n1') && firsts.includes('n1b'));
+});
+
+test('options cover the same trains as the origin board, per line', () => {
+  const res = plan('h=H01&w=W01&r=R|N>T02>7', 'work');
+  const board = res.stations[0].boards;
+  for (const b of board) {
+    const deps = res.journeys.filter((j) => j.legs[0].line === b.line).map((j) => j.dep).sort();
+    assert.deepEqual(deps, b.deps, `line ${b.line}`);
+  }
 });
 
 test('departed trains and wrong-direction trips are excluded', () => {
@@ -86,7 +95,7 @@ test('every catchable train is shown, even with an old walk-time param', () => {
   const res = plan('h=H01&w=W01&r=N>T02>7&k=5', 'work');
   const n1b = res.journeys.find((j) => j.legs[0].trip === 'n1b');
   assert.ok(n1b, 'a train leaving in 2 min is still shown');
-  assert.equal(res.journeys[0], n1b, 'and listed first');
+  assert.equal(res.journeys[0].legs[0].trip, 'n1', 'the train leaving in 1 min is listed first');
   assert.ok(!('missed' in n1b));
 });
 
@@ -127,4 +136,11 @@ test('departure boards cover the origin and every transfer station, in direction
   assert.deepEqual(home.stations.map((s) => s.stop), ['W01', 'T01', 'T02']);
   assert.deepEqual(home.stations[1].boards, [{ line: 'R', deps: [NOW + 30, NOW + 900] }], 'southbound Rs at T01');
   assert.deepEqual(home.stations[2].boards, [{ line: 'N', deps: [NOW + 1000] }]);
+});
+
+test('the same trip arriving in two feeds is only counted once', async () => {
+  const load = async (_k, wanted) => decodeFeed(encodeFeed(NOW, scenario()), (r) => wanted.has(r));
+  const res = await buildPlan(params('h=H01&w=W01&r=R>T01>7,N>T02>7'), load, { now: NOW });
+  const keys = res.dirs.work.journeys.map((j) => j.legs.map((l) => l.trip).join('>'));
+  assert.equal(new Set(keys).size, keys.length);
 });
